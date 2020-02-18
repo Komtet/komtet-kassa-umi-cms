@@ -12,20 +12,20 @@ $domainCollection = domainsCollection::getInstance();
 
 if (!$objectTypesCollection->getTypeIdByGUID($GUIDS['config_type_komtet_kassa'])) {
     $parentTypeId = $objectTypesCollection->getTypeIdByGUID("root-settings-type");
-    
-    $configTypeId = $objectTypesCollection->addType($parentTypeId, $typeName);
+
     $configTypeName = "komtet_kassa_config";
+    $configTypeId = $objectTypesCollection->addType($parentTypeId, $configTypeName);
 
     $type = $objectTypesCollection->getType($configTypeId);
-    $type->setGUID($GUIDS['config_type']);
+    $type->setGUID($GUIDS['config_type_komtet_kassa']);
     $type->setIsLocked(true);
 
 
-    $taxSystemTypeId = $objectTypesCollection->addType($rootGuideTypeId, "Система налогооблажения");
+    $taxSystemTypeId = $objectTypesCollection->addType($parentTypeId, "Система налогооблажения");
     $taxSystemType = $objectTypesCollection->getType($taxSystemTypeId);
     $taxSystemType->setIsGuidable(true);
     $taxSystemType->setIsLocked(true);
-    $taxSystemType->setGUID($GUIDS['sno']);
+    $taxSystemType->setGUID($GUIDS['sno_komtet_kassa']);
     $taxSystemTypeFieldId = $fieldsCollection->addField('sno', 'СНО', 16);
     $taxSystemTypeField = $fieldsCollection->getField($taxSystemTypeFieldId);
     $taxSystemTypeField->setIsRequired(true);
@@ -56,11 +56,11 @@ if (!$objectTypesCollection->getTypeIdByGUID($GUIDS['config_type_komtet_kassa'])
     $_5->commit();
 
 
-    $taxTypeId = $objectTypesCollection->addType($rootGuideTypeId, "Налоговая ставка");
+    $taxTypeId = $objectTypesCollection->addType($parentTypeId, "Налоговая ставка");
     $taxType = $objectTypesCollection->getType($taxTypeId);
     $taxType->setIsGuidable(true);
     $taxType->setIsLocked(true);
-    $taxType->setGUID($GUIDS['vat']);
+    $taxType->setGUID($GUIDS['vat_komtet_kassa']);
     $taxTypeFieldId = $fieldsCollection->addField('vat', 'НДС', 16);
     $taxTypeField = $fieldsCollection->getField($taxTypeFieldId);
 
