@@ -11,103 +11,123 @@ $langsCollection = langsCollection::getInstance();
 $domainCollection = domainsCollection::getInstance();
 
 if (!$objectTypesCollection->getTypeIdByGUID($GUIDS['config_type_komtet_kassa'])) {
-    $parentTypeId = $objectTypesCollection->getTypeIdByGUID("root-settings-type");
+    $parentTypeId = $objectTypesCollection->getTypeIdByGUID("root-guides-type");
 
     $configTypeName = "komtet_kassa_config";
     $configTypeId = $objectTypesCollection->addType($parentTypeId, $configTypeName);
 
-    $type = $objectTypesCollection->getType($configTypeId);
-    $type->setGUID($GUIDS['config_type_komtet_kassa']);
-    $type->setIsLocked(true);
+    $configType = $objectTypesCollection->getType($configTypeId);
+    $configType->setGUID($GUIDS['config_type_komtet_kassa']);
+    // $configType->setIsLocked(true);
+
+    $configType->addFieldsGroup("fisc_params", "Параметры фискаизации", true, true);
+    $fiscGroup = $configType->getFieldsGroupByName('fisc_params');
+
+    $snoTypeId = $objectTypesCollection->addType($parentTypeId, "Система налогооблажения");
+    $snoType = $objectTypesCollection->getType($snoTypeId);
+    $snoType->setIsGuidable(true);
+    $snoType->setIsLocked(true);
+    $snoType->setGUID($GUIDS['sno']);
+    $snoType->addFieldsGroup("sno_settings", "Система налогооблажения", true, true);
+    $snoType->commit();
+    $snoTypeGroup = $snoType->getFieldsGroupByName('sno_settings');
+    $snoTypeFieldId = $fieldsCollection->addField('sno', 'СНО', 16);
+    $snoTypeField = $fieldsCollection->getField($snoTypeFieldId);
+    $snoTypeField->setIsRequired(true);
+    $snoTypeGroup->attachField($snoTypeFieldId);
+
+    $_osn_sno = $objectsCollection->getObject($objectsCollection->addObject("Общая система налогообложения", $snoTypeId));
+    $_osn_sno->setValue("sno", "0");
+    $_osn_sno->commit();
+
+    $_usn_sno = $objectsCollection->getObject($objectsCollection->addObject("Упрощенная система налогообложения (Доход)", $snoTypeId));
+    $_usn_sno->setValue("sno", "1");
+    $_usn_sno->commit();
+
+    $_usndr_sno = $objectsCollection->getObject($objectsCollection->addObject("Упрощенная система налогообложения (Доход минус Расход)", $snoTypeId));
+    $_usndr_sno->setValue("sno", "2");
+    $_usndr_sno->commit();
+
+    $_envd_sno = $objectsCollection->getObject($objectsCollection->addObject("Единый налог на вмененный доход", $snoTypeId));
+    $_envd_sno->setValue("sno", "3");
+    $_envd_sno->commit();
+
+    $_esn_sno = $objectsCollection->getObject($objectsCollection->addObject("Единый сельскохозяйственный налог", $snoTypeId));
+    $_esn_sno->setValue("sno", "4");
+    $_esn_sno->commit();
+
+    $_patent_sno = $objectsCollection->getObject($objectsCollection->addObject("Патентная система налогообложения", $snoTypeId));
+    $_patent_sno->setValue("sno", "5");
+    $_patent_sno->commit();
 
 
-    $taxSystemTypeId = $objectTypesCollection->addType($parentTypeId, "Система налогооблажения");
-    $taxSystemType = $objectTypesCollection->getType($taxSystemTypeId);
-    $taxSystemType->setIsGuidable(true);
-    $taxSystemType->setIsLocked(true);
-    $taxSystemType->setGUID($GUIDS['sno_komtet_kassa']);
-    $taxSystemTypeFieldId = $fieldsCollection->addField('sno', 'СНО', 16);
-    $taxSystemTypeField = $fieldsCollection->getField($taxSystemTypeFieldId);
-    $taxSystemTypeField->setIsRequired(true);
+    $vatTypeId = $objectTypesCollection->addType($parentTypeId, "Налоговая ставка");
+    $vatType = $objectTypesCollection->getType($vatTypeId);
+    $vatType->setIsGuidable(true);
+    $vatType->setIsLocked(true);
+    $vatType->setGUID($GUIDS['vat']);
+    $vatType->addFieldsGroup('vat_settings', "Налоговая ставка", true, true);
+    $vatType->commit();
+    $vatTypeGroup = $vatType->getFieldsGroupByName('vat_settings');
+    $vatTypeFieldId = $fieldsCollection->addField('vat', 'НДС', 16);
+    $vatTypeField = $fieldsCollection->getField($vatTypeFieldId);
+    $vatTypeField->setIsRequired(true);
+    $vatTypeGroup->attachField($vatTypeFieldId);
 
+    $without_vat = $objectsCollection->getObject($objectsCollection->addObject("Без НДС", $vatTypeId));
+    $without_vat->setValue('vat', 1);
+    $without_vat->commit();
 
-    $_0 = $objectsCollection->getObject($objectsCollection->addObject("Общая система налогообложения", $taxSystemTypeId));
-    $_0->setValue("sno", "0");
-    $_0->commit();
+    $_0_vat = $objectsCollection->getObject($objectsCollection->addObject("НДС 0%", $vatTypeId));
+    $_0_vat->setValue('vat', 2);
+    $_0_vat->commit();
 
-    $_1 = $objectsCollection->getObject($objectsCollection->addObject("Упрощенная система налогообложения (Доход)", $taxSystemTypeId));
-    $_1->setValue("sno", "1");
-    $_1->commit();
+    $_10_vat = $objectsCollection->getObject($objectsCollection->addObject("НДС 10%", $vatTypeId));
+    $_10_vat->setValue('vat', 3);
+    $_10_vat->commit();
 
-    $_2 = $objectsCollection->getObject($objectsCollection->addObject("Упрощенная система налогообложения (Доход минус Расход)", $taxSystemTypeId));
-    $_2->setValue("sno", "2");
-    $_2->commit();
+    $_20_vat = $objectsCollection->getObject($objectsCollection->addObject("НДС 20%", $vatTypeId));
+    $_20_vat->setValue('vat', 4);
+    $_20_vat->commit();
 
-    $_3 = $objectsCollection->getObject($objectsCollection->addObject("Единый налог на вмененный доход", $taxSystemTypeId));
-    $_3->setValue("sno", "3");
-    $_3->commit();
+    $_110_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетный НДС 10/110", $vatTypeId));
+    $_110_vat->setValue('vat', 5);
+    $_110_vat->commit();
 
-    $_4 = $objectsCollection->getObject($objectsCollection->addObject("Единый сельскохозяйственный налог", $taxSystemTypeId));
-    $_4->setValue("sno", "4");
-    $_4->commit();
+    $_120_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетный НДС 20/120", $vatTypeId));
+    $_120_vat->setValue('vat', 6);
+    $_120_vat->commit();
 
-    $_5 = $objectsCollection->getObject($objectsCollection->addObject("Патентная система налогообложения", $taxSystemTypeId));
-    $_5->setValue("sno", "5");
-    $_5->commit();
+    $isPrintTypeId = $objectTypesCollection->addType($parentTypeId, "Печатать ли чек");
+    $isPrintType = $objectTypesCollection->getType($isPrintTypeId);
+    $isPrintType->setIsGuidable(true);
+    $isPrintType->setIsLocked(true);
+    $isPrintType->commit();
 
-
-    $taxTypeId = $objectTypesCollection->addType($parentTypeId, "Налоговая ставка");
-    $taxType = $objectTypesCollection->getType($taxTypeId);
-    $taxType->setIsGuidable(true);
-    $taxType->setIsLocked(true);
-    $taxType->setGUID($GUIDS['vat_komtet_kassa']);
-    $taxTypeFieldId = $fieldsCollection->addField('vat', 'НДС', 16);
-    $taxTypeField = $fieldsCollection->getField($taxTypeFieldId);
-
-    $_18_tax = $objectsCollection->getObject($objectsCollection->addObject("НДС 18%", $taxTypeId));
-    $_18_tax->setValue("vat", '18');
-    $_18_tax->commit();
-
-    $_10_tax = $objectsCollection->getObject($objectsCollection->addObject("НДС 10%", $taxTypeId));
-    $_10_tax->setValue("vat", '10');
-    $_10_tax->commit();
-
-    $without_tax = $objectsCollection->getObject($objectsCollection->addObject("Без НДС", $taxTypeId));
-    $without_tax->setValue("vat", 'no');
-    $without_tax->commit();
-
-    $_0_tax = $objectsCollection->getObject($objectsCollection->addObject("НДС 0%", $taxTypeId));
-    $_0_tax->setValue("vat", '0');
-    $_0_tax->commit();
-
-    $_118_tax = $objectsCollection->getObject($objectsCollection->addObject("расчетный НДС 18/118", $taxTypeId));
-    $_118_tax->setValue("vat", '118');
-    $_118_tax->commit();
-
-    $_110_tax = $objectsCollection->getObject($objectsCollection->addObject("расчетный НДС 10/110", $taxTypeId));
-    $_110_tax->setValue("vat", '110');
-    $_110_tax->commit();
-
-
-    $type->addFieldsGroup("fisc_params", "Параметры фискаизации", true, true);
-    $fiscGroup = $type->getFieldsGroupByName('fisc_params');
-    $is_print_check_FieldId = $fieldsCollection->addField('is_print_check', 'Печатать ли чек', true);
+    $is_print_check_FieldId = $fieldsCollection->addField('is_print_check', "Печатать ли чек", '1', true);
     $is_print_check_Field = $fieldsCollection->getField($is_print_check_FieldId);
     $is_print_check_Field->setIsRequired(false);
     $is_print_check_Field->setIsVisible(true);
     $is_print_check_Field->setImportanceStatus(true);
+    $fiscGroup->attachField($is_print_check_FieldId);
 
-    $sno_FieldId = $fieldsCollection->addField('sno', 'Система налогообложения', '');
+    $sno_FieldId = $fieldsCollection->addField('sno', "Система налогообложения", 16);
     $sno_Field = $fieldsCollection->getField($sno_FieldId);
     $sno_Field->setIsRequired(false);
     $sno_Field->setIsVisible(true);
     $sno_Field->setImportanceStatus(true);
-
-    $fiscGroup->attachField($is_print_check_FieldId);
+    $sno_Field->setGuideId($snoTypeId);
     $fiscGroup->attachField($sno_Field);
 
+    $vat_FieldId = $fieldsCollection->addField('vat', "Налоговая ставка", 16);
+    $vat_Field = $fieldsCollection->getField($vat_FieldId);
+    $vat_Field->setIsRequired(false);
+    $vat_Field->setIsVisible(true);
+    $vat_Field->setImportanceStatus(true);
+    $vat_Field->setGuideId($vatTypeId);
+    $fiscGroup->attachField($vat_Field);
 
-    $type->commit();
+    $configType->commit();
 
     $permissionsCollection = permissionsCollection::getInstance();
     $guestID = $permissionsCollection->getGuestId();

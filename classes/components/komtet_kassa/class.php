@@ -62,7 +62,7 @@ class komtet_kassa extends def_module {
         $objectTypesCollection = umiObjectTypesCollection::getInstance();
         $objectsCollection = umiObjectsCollection::getInstance();
 
-        $snoTypeId = $objectTypesCollection->getTypeIdByGUID($GUIDS['sno_komtet_kassa']);
+        $snoTypeId = $objectTypesCollection->getTypeIdByGUID($GUIDS['sno']);
         $snosObjects = $objectsCollection->getGuidedItems($snoTypeId);
 
         $snosObjects['value'] = $currentSno;
@@ -78,7 +78,7 @@ class komtet_kassa extends def_module {
         $objectTypesCollection = umiObjectTypesCollection::getInstance();
         $objectsCollection = umiObjectsCollection::getInstance();
 
-        $vatTypeId = $objectTypesCollection->getTypeIdByGUID($GUIDS['vat_komtet_kassa']);
+        $vatTypeId = $objectTypesCollection->getTypeIdByGUID($GUIDS['vat']);
         $vatsObjects = $objectsCollection->getGuidedItems($vatTypeId);
 
         $vatsObjects['value'] = $currentVat;
