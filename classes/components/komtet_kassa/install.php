@@ -28,7 +28,7 @@ $COMPONENTS = [
     './classes/components/komtet_kassa/permissions.php',
     './classes/components/komtet_kassa/events.php',
     './classes/components/komtet_kassa/handlers.php',
-    
+
     './classes/components/komtet_kassa/helpers/komtet-kassa-php-sdk/src/Agent.php',
     './classes/components/komtet_kassa/helpers/komtet-kassa-php-sdk/src/AuthorisedPerson.php',
     './classes/components/komtet_kassa/helpers/komtet-kassa-php-sdk/src/Buyer.php',
