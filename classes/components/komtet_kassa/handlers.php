@@ -1,209 +1,207 @@
 <?php
 
-	use UmiCms\Service;
-	use Komtet\KassaSdk\KomtetPayment;
-	use Komtet\KassaSdk\KomtetCheck;
-	use Komtet\KassaSdk\KomtetVat;
-	use Komtet\KassaSdk\KomtetPosition;
-	use Komtet\KassaSdk\KomtetClient;
-	use Komtet\KassaSdk\KomtetQueueManager;
+    use UmiCms\Service;
+    use Komtet\KassaSdk\Payment as KomtetPayment;
+    use Komtet\KassaSdk\Check as KomtetCheck;
+    use Komtet\KassaSdk\Vat as KomtetVat;
+    use Komtet\KassaSdk\Position as KomtetPosition;
+    use Komtet\KassaSdk\Client as KomtetClient;
+    use Komtet\KassaSdk\QueueManager as KomtetQueueManager;
 
 
-	/** Класс обработчиков событий */
-	class Komtet_kassaHandlers {
-		/** @var appointment $module */
-		public $module;
+    /** Класс обработчиков событий */
+    class Komtet_kassaHandlers {
+        /** @var appointment $module */
+        public $module;
 
-		public function onSystemModifyPropertyValue(iUmiEventPoint $event) {
+        public function onModifyObject(iUmiEventPoint $event) {
+            if ($event->getMode() == 'after') {
 
-			if ($event->getParam('property') != 'payment_status_id') {
-				return false;
-			}
+                $object = $event->getRef('object');
 
-			if ($event->getMode() != 'after') {
-				return false;
-			}
+                if (!$object instanceof iUmiObject) {
+                    return false;
+                }
 
-			if ($event->getParam('oldValue') == $event->getParam('newValue')) {
-				return false;
-			}
+                $typeId = umiObjectTypesCollection::getInstance()->getTypeIdByHierarchyTypeName('emarket', 'order');
+                if ($object->getTypeId() != $typeId) {
+                    return false;
+                }
 
-			// 327 - object-prinyata
-			// 326 - object-otklonena
-			if (!in_array($event->getParam('newValue'), Array('327', '326'))) {
-				return false;
-			}
+                $order = order::get($object->getId());
+                $this->fiscalize($order, $order->getValue('payment_status_id'));
 
-			$entity = $event->getRef('entity');
-			$objectsCollection = umiObjectsCollection::getInstance();
-			$order = order::get($entity->getId());
+                return true;
+            }
 
-			$sql = "SELECT * FROM cms3_order_fiscalization_status WHERE order_id = ".$order->getNumber();
-			$connection = ConnectionPool::getInstance()->getConnection();
-			$result = $connection->queryResult($sql);
-			$singleRow = $result->fetch();
-			$order_status = $singleRow['status'];
+            return false;
+        }
 
-			if ($order_status == 'done' || ($order_status == 'done' && $event->getParam('newValue') != '326')) {
-				return false;
-			}
+        public function onSystemModifyPropertyValue(iUmiEventPoint $event) {
 
-			if($order_status) {
-				$order_exists = true;
-			}
-			else {
-				$order_exists = false;
-			}
+            if ($event->getMode() == 'after' && $event->getParam('property') == 'payment_status_id') {
+                $entity = $event->getRef('entity');
+                $order = order::get($entity->getId());
+                $this->fiscalize($order, $event->getParam('newValue'));
+                return true;
+            }
 
-			$this->fiscalize($order, $event->getParam('newValue'), $order_exists);
-
-			return true;
-		}
+            return false;
+        }
 
 
-		public function onPaymentStatusChanged(iUmiEventPoint $event) {
+        public function onPaymentStatusChanged(iUmiEventPoint $event) {
 
-			if ($event->getMode() != 'after') {
-				return false;
-			}
+            if ($event->getMode() == 'after') {
+                $this->fiscalize($event->getRef('order'), $event->getParam('new-status-id'));
+                return true;
+            }
 
-			if ($event->getParam('old-status-id') == $event->getParam('new-status-id')) {
-				return false;
-			}
+            return false;
+        }
 
-			// 327 - object-prinyata
-			// 326 - object-otklonena
-			if (!in_array($event->getParam('new-status-id'), Array('327', '326'))) {
-				return false;
-			}
+        private function fiscalize($order, $paymentStatus) {
+            include "standalone.php";
 
-			$order = $event->getRef('order');
+            $sql = "SELECT * FROM cms3_order_fiscalization_status WHERE order_id = ".$order->getNumber();
+            $connection = ConnectionPool::getInstance()->getConnection();
+            $result = $connection->queryResult($sql);
+            $singleRow = $result->fetch();
 
-			$sql = "SELECT * FROM cms3_order_fiscalization_status WHERE order_id = ".$order->getNumber();
-			$connection = ConnectionPool::getInstance()->getConnection();
-			$result = $connection->queryResult($sql);
-			$singleRow = $result->fetch();
-			$order_status = $singleRow['status'];
+            $orderFiscStatus = null;
+            if($singleRow) {
+                $orderFiscStatus = $singleRow['status'];
+            }
 
-			if ($order_status == 'done' || ($order_status == 'done' && $event->getParam('new-status-id') != '326')) {
-				return false;
-			}
+            $orderReturned = $order->getValue('delivery_status_id') == $order->getStatusByCode('return', 'order_delivery_status');
 
-			if($order_status) {
-				$order_exists = true;
-			}
-			else {
-				$order_exists = false;
-			}
+            if (!(($orderFiscStatus == 'done' && $orderReturned) || ($orderFiscStatus != 'done' && $order->isOrderPayed()))) {
+                return false;
+            }
 
-			$this->fiscalize($order, $event->getParam('new-status-id'), $order_exists);
+            $umiRegistry = Service::Registry();
 
-			return true;
-		}
+            $vatId = $umiRegistry->get('//modules/komtet_kassa/vat');
+            $sql = "SELECT * FROM cms3_object_content WHERE obj_id = ".$vatId;
+            $connection = ConnectionPool::getInstance()->getConnection();
+            $result = $connection->queryResult($sql);
+            $singleRow = $result->fetch();
+            $vat = $singleRow;
 
-		private function fiscalize($order, $paymentStatus, $order_exists) {
-			include "standalone.php";
+            $snoId = $umiRegistry->get('//modules/komtet_kassa/sno');
+            $sql = "SELECT * FROM cms3_object_content WHERE obj_id = ".$snoId;
+            $connection = ConnectionPool::getInstance()->getConnection();
+            $result = $connection->queryResult($sql);
+            $singleRow = $result->fetch();
+            $sno = intval($singleRow['varchar_val']);
 
-			$umiRegistry = Service::Registry();
+            $isPrintCheck = $umiRegistry->get('//modules/komtet_kassa/is_print_check');
+            $queueId = $umiRegistry->get('//modules/komtet_kassa/queue_id');
+            $shopId = $umiRegistry->get('//modules/komtet_kassa/shop_id');
+            $secret = $umiRegistry->get('//modules/komtet_kassa/shop_secret');
 
-			$vatId = $umiRegistry->get('//modules/komtet_kassa/vat');
-			$sql = "SELECT varchar_val FROM cms3_object_content WHERE obj_id = ".$vatId;
-			$connection = ConnectionPool::getInstance()->getConnection();
-			$result = $connection->queryResult($sql);
-			$singleRow = $result->fetch();
-			$vat = $singleRow['varchar_val'];
+            include_once (__DIR__."/helpers/komtet-kassa-php-sdk/src/Payment.php");
+            include_once (__DIR__."/helpers/komtet-kassa-php-sdk/src/Check.php");
+            include_once (__DIR__."/helpers/komtet-kassa-php-sdk/src/Vat.php");
+            include_once (__DIR__."/helpers/komtet-kassa-php-sdk/src/Position.php");
+            include_once (__DIR__."/helpers/komtet-kassa-php-sdk/src/Client.php");
+            include_once (__DIR__."/helpers/komtet-kassa-php-sdk/src/QueueManager.php");
+            include_once (__DIR__."/helpers/komtet-kassa-php-sdk/src/Exception/SdkException.php");
+            include_once (__DIR__."/helpers/komtet-kassa-php-sdk/src/Exception/ClientException.php");
 
-			$snoId = $umiRegistry->get('//modules/komtet_kassa/sno');
-			$sql = "SELECT varchar_val FROM cms3_object_content WHERE obj_id = ".$snoId;
-			$connection = ConnectionPool::getInstance()->getConnection();
-			$result = $connection->queryResult($sql);
-			$singleRow = $result->fetch();
-			$sno = intval($singleRow['varchar_val']);
+            if ($orderFiscStatus) {
+                $sql = "UPDATE cms3_order_fiscalization_status SET status = 'pending' WHERE order_id = ".$order->getNumber();
+                $pool = ConnectionPool::getInstance();
+                $connection = $pool->getConnection();
+                $result = $connection->query($sql);
+            }
+            else {
+                $sql = "INSERT INTO cms3_order_fiscalization_status (order_id, status) VALUES(".$order->getNumber().", 'pending');";
+                $pool = ConnectionPool::getInstance();
+                $connection = $pool->getConnection();
+                $result = $connection->query($sql);
+            }
 
-			$is_print_check = $umiRegistry->get('//modules/komtet_kassa/is_print_check');
-			$queue_id = $umiRegistry->get('//modules/komtet_kassa/queue_id');
-			$shop_id = $umiRegistry->get('//modules/komtet_kassa/shop_id');
-			$secret = $umiRegistry->get('//modules/komtet_kassa/shop_secret');
+            $positions = $order->getItems();
 
-			include_once (__DIR__."/helpers/KomtetPayment.php");
-			include_once (__DIR__."/helpers/KomtetCheck.php");
-			include_once (__DIR__."/helpers/KomtetVat.php");
-			include_once (__DIR__."/helpers/KomtetPosition.php");
-			include_once (__DIR__."/helpers/KomtetClient.php");
-			include_once (__DIR__."/helpers/KomtetQueueManager.php");
+            $payment = new KomtetPayment(KomtetPayment::TYPE_CARD, floatval($order->getActualPrice()));
 
-			if ($order_exists) {
-			    $sql = "UPDATE cms3_order_fiscalization_status SET status = 'pending' WHERE order_id = ".$order->getNumber();
-			    $pool = ConnectionPool::getInstance();
-			    $connection = $pool->getConnection();
-			    $result = $connection->query($sql);
-			}
-			else {
-			    $sql = "INSERT INTO cms3_order_fiscalization_status (order_id, status) VALUES(".$order->getNumber().", 'pending');";
-			    $pool = ConnectionPool::getInstance();
-			    $connection = $pool->getConnection();
-			    $result = $connection->query($sql);
-			}
+            $method = $orderReturned ? KomtetCheck::INTENT_SELL_RETURN : KomtetCheck::INTENT_SELL;
 
-			$positions = $order->getItems();
+            $customerId = $order->getCustomerId();
+            $customer = customer::get($customerId);
 
-			$payment = KomtetPayment::createCard(floatval($order->getActualPrice()));
+            $check = new KomtetCheck($order->getNumber(), $customer->getEmail(), $method, $sno);
+            $check->setShouldPrint($isPrintCheck);
+            $check->addPayment($payment);
 
-			// 327 - object-prinyata
-			// 326 - object-otklonena
+            // version compatibility
+            if ($vat['float_val']) {
+                $vat = intval($vat['float_val']);
+            }
+            else $vat = intval($vat['varchar_val']);
 
-			$payment_status = $order->getPaymentStatus();
-			$method = $payment_status == '326' ? KomtetCheck::INTENT_SELL_RETURN : KomtetCheck::INTENT_SELL;
+            switch ($vat) {
+                case 1:
+                    $vatObject = new KomtetVat('no');
+                    break;
+                case 2:
+                    $vatObject = new KomtetVat('0');
+                    break;
+                case 3:
+                    $vatObject = new KomtetVat('10');
+                    break;
+                case 4:
+                    $vatObject = new KomtetVat('20');
+                    break;
+                case 5:
+                    $vatObject = new KomtetVat('110');
+                    break;
+                case 6:
+                    $vatObject = new KomtetVat('120');
+                    break;
+                default:
+                    $vatObject = $vat;
+            }
 
-			$customer_id = $order->getCustomerId();
-			$customer = customer::get($customer_id);
+            foreach($positions as $position) {
+                $positionObj = new KomtetPosition($position->getName(),
+                                                  floatval($position->getActualPrice()),
+                                                  floatval($position->getAmount()),
+                                                  floatval($position->getTotalActualPrice()),
+                                                  floatval($position->getDiscountValue()),
+                                                  $vatObject);
+                $check->addPosition($positionObj);
+            }
 
-			$check = new KomtetCheck($order->getNumber(), $customer->getEmail(), $method, $sno);
-			$check->setShouldPrint($is_print_check);
-			$check->addPayment($payment);
+            $check->applyDiscount($order->getDiscountValue());
 
-			if ($vat) {
-				$vat_object = new KomtetVat($vat);
-			}
-			else{
-				$vat_object = null;
-			}
-			foreach( $positions as $position )
-			{
-				$positionObj = new KomtetPosition($position->getName(),
-												  floatval($position->getActualPrice()),
-												  floatval($position->getAmount()),
-												  floatval($position->getTotalActualPrice()),
-												  floatval($position->getDiscountValue()),
-												  $vat_object);
-				$check->addPosition($positionObj);
-			}
+            if (floatval($order->getDeliveryPrice()) > 0) {
+                $shippingPosition = new KomtetPosition("Доставка",
+                                                       floatval($order->getDeliveryPrice()),
+                                                       1,
+                                                       floatval($order->getDeliveryPrice()),
+                                                       0,
+                                                       $vatObject);
+                $check->addPosition($shippingPosition);
+            }
 
-			if (floatval($order->getDeliveryPrice()) > 0) {
-				$shippingPosition = new KomtetPosition("Доставка",
-												 	   floatval($order->getDeliveryPrice()),
-												 	   1,
-												 	   floatval($order->getDeliveryPrice()),
-												 	   0,
-												 	   $vat_object);
-				$check->addPosition($shippingPosition);
-			}
+            $client = new KomtetClient($shopId, $secret);
+            $queueManager = new KomtetQueueManager($client);
 
-			$client = new KomtetClient($shop_id, $secret);
-			$queueManager = new KomtetQueueManager($client);
+            $queueManager->registerQueue('print_queue', $queueId);
 
-			$queueManager->registerQueue('print_queue', $queue_id);
+            // print_r("ok");
+            // die();
 
-			// print_r("ok");
-			// die();
+            try {
+                $queueManager->putCheck($check, 'print_queue');
+            } catch (SdkException $e) {
+                echo $e->getMessage();
+            }
 
-			try {
-			    $queueManager->putCheck($check, 'print_queue');
-			} catch (SdkException $e) {
-			    echo $e->getMessage();
-			}
-			return true;
-		}
+            return true;
+        }
 
 
-	}
+    }
