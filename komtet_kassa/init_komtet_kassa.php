@@ -48,10 +48,6 @@ if (!$objectTypesCollection->getTypeIdByGUID($GUIDS['config_type_komtet_kassa'])
     $_usndr_sno->setValue("sno", "2");
     $_usndr_sno->commit();
 
-    $_envd_sno = $objectsCollection->getObject($objectsCollection->addObject("Единый налог на вмененный доход", $snoTypeId));
-    $_envd_sno->setValue("sno", "3");
-    $_envd_sno->commit();
-
     $_esn_sno = $objectsCollection->getObject($objectsCollection->addObject("Единый сельскохозяйственный налог", $snoTypeId));
     $_esn_sno->setValue("sno", "4");
     $_esn_sno->commit();

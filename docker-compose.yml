@@ -3,19 +3,21 @@ version: '3'
 services:
   db:
     image: mysql:5.7
-    container_name: umi_web
+    container_name: umi_mysql
     environment:
       MYSQL_ROOT_PASSWORD: my_secret_pw_shh
       MYSQL_DATABASE: test_db
       MYSQL_USER: devuser
       MYSQL_PASSWORD: devpass
     volumes:
-      - ./mysql:/var/lib/mysql
+      - ./data/mysql:/var/lib/mysql
     command: mysqld --sql_mode=""
+    ports:
+      - "9906:3306"
   web:
-    image: ss_web:last
+    image: umi_web:last
     build: ./
-    container_name: umi_mysql
+    container_name: umi_web
     depends_on:
       - db
     volumes:
