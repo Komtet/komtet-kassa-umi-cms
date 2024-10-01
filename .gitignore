@@ -1,4 +1,5 @@
 
-docker/php/
-docker/data/
-docker/mysql/
+php/
+data/
+mysql/
+dist/
