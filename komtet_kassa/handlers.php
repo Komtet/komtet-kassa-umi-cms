@@ -128,10 +128,14 @@
 
             $method = $orderReturned ? KomtetCheck::INTENT_SELL_RETURN : KomtetCheck::INTENT_SELL;
 
-            $customerId = $order->getCustomerId();
-            $customer = customer::get($customerId);
+            // Получаем email или телефон покупателя
+            $customerId = $order->getValue('customer_id');
+            $customer = umiObjectsCollection::getInstance()->getObject($customerId);
+            $customerEmail = $customer->getValue('e-mail');
+            $customerPhone = $customer->getValue('phone');
+            $contact = $customerEmail ? $customerEmail : $customerPhone;
 
-            $check = new KomtetCheck($order->getNumber(), $customer->getEmail(), $method, $sno);
+            $check = new KomtetCheck($order->getNumber(), $contact, $method, $sno);
             $check->setShouldPrint($isPrintCheck);
             $check->addPayment($payment);
 
@@ -143,25 +147,25 @@
 
             switch ($vat) {
                 case 1:
-                    $vatObject = new KomtetVat('no');
+                    $vatObject = new KomtetVat(KomtetVat::RATE_NO);
                     break;
                 case 2:
-                    $vatObject = new KomtetVat('0');
+                    $vatObject = new KomtetVat(KomtetVat::RATE_0);
                     break;
                 case 3:
-                    $vatObject = new KomtetVat('10');
+                    $vatObject = new KomtetVat(KomtetVat::RATE_10);
                     break;
                 case 4:
-                    $vatObject = new KomtetVat('20');
+                    $vatObject = new KomtetVat(KomtetVat::RATE_20);
                     break;
                 case 5:
-                    $vatObject = new KomtetVat('110');
+                    $vatObject = new KomtetVat(KomtetVat::RATE_110);
                     break;
                 case 6:
-                    $vatObject = new KomtetVat('120');
+                    $vatObject = new KomtetVat(KomtetVat::RATE_120);
                     break;
                 default:
-                    $vatObject = $vat;
+                    $vatObject = new KomtetVat(KomtetVat::RATE_NO);
             }
 
             foreach($positions as $position) {
@@ -190,9 +194,6 @@
             $queueManager = new KomtetQueueManager($client);
 
             $queueManager->registerQueue('print_queue', $queueId);
-
-            // print_r("ok");
-            // die();
 
             try {
                 $queueManager->putCheck($check, 'print_queue');
