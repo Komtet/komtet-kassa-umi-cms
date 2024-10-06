@@ -22,10 +22,10 @@ build:  ## Собрать контейнер
 	@docker-compose build
 
 start:  ## Запустить контейнер
-	@docker compose up -d web
+	@docker-compose up -d web
 
 stop:  ## Остановить все контейнеры
-	@docker compose down
+	@docker-compose down
 
 update:  ##Обновить плагин для фискализации
 	@cp -r -f komtet_kassa php/classes/components/
