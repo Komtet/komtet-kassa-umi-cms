@@ -21,16 +21,16 @@ help:
 build:  ## Собрать контейнер
 	@docker-compose build
 
-start: stop  ## Запустить контейнер
-	@docker-compose up -d web
+start:  ## Запустить контейнер
+	@docker compose up -d web
 
-stop: ## Остановить все контейнеры
-	@docker-compose down
+stop:  ## Остановить все контейнеры
+	@docker compose down
 
 update:  ##Обновить плагин для фискализации
 	@cp -r -f komtet_kassa php/classes/components/
 
-release: ## Создать архив для загрузки
+release:  ## Создать архив для загрузки
 	@mkdir -p $(DIST_MARKET_DIR)
 	@zip -r -q $(DIST_MARKET_DIR)/$(PROJECT_ZIP) $(PROJECT_DIR)
 	@tar -czf $(DIST_MARKET_DIR)/$(PROJECT_TAR_GZ) $(PROJECT_DIR)

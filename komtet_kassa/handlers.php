@@ -82,18 +82,12 @@
             $umiRegistry = Service::Registry();
 
             $vatId = $umiRegistry->get('//modules/komtet_kassa/vat');
-            $sql = "SELECT * FROM cms3_object_content WHERE obj_id = ".$vatId;
-            $connection = ConnectionPool::getInstance()->getConnection();
-            $result = $connection->queryResult($sql);
-            $singleRow = $result->fetch();
-            $vat = $singleRow;
+            $vatObject = umiObjectsCollection::getInstance()->getObject($vatId);
+            $vat = $vatObject->getValue('vat');
 
             $snoId = $umiRegistry->get('//modules/komtet_kassa/sno');
-            $sql = "SELECT * FROM cms3_object_content WHERE obj_id = ".$snoId;
-            $connection = ConnectionPool::getInstance()->getConnection();
-            $result = $connection->queryResult($sql);
-            $singleRow = $result->fetch();
-            $sno = intval($singleRow['varchar_val']);
+            $snoObject = umiObjectsCollection::getInstance()->getObject($snoId);
+            $sno = $snoObject->getValue('sno');
 
             $isPrintCheck = $umiRegistry->get('//modules/komtet_kassa/is_print_check');
             $queueId = $umiRegistry->get('//modules/komtet_kassa/queue_id');
@@ -140,11 +134,7 @@
             $check->addPayment($payment);
 
             // version compatibility
-            if ($vat['float_val']) {
-                $vat = intval($vat['float_val']);
-            }
-            else $vat = intval($vat['varchar_val']);
-
+            $vat = intval($vat);
             switch ($vat) {
                 case 1:
                     $vatObject = new KomtetVat(KomtetVat::RATE_NO);
