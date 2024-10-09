@@ -3,6 +3,7 @@ VERSION=$(shell grep -o '^[0-9]\+\.[0-9]\+\.[0-9]\+' CHANGELOG.rst | head -n1)
 DIST_MARKET_DIR="dist/$(VERSION)"
 PROJECT_DIR="komtet_kassa"
 PROJECT_ZIP="$(PROJECT_DIR).zip"
+PROJECT_TAR_GZ="$(PROJECT_DIR).tar.gz"
 
 # Colors
 COLOR_OFF=\033[0m
@@ -20,21 +21,23 @@ help:
 build:  ## Собрать контейнер
 	@docker-compose build
 
-start: stop  ## Запустить контейнер
+start:  ## Запустить контейнер
 	@docker-compose up -d web
 
-stop: ## Остановить все контейнеры
+stop:  ## Остановить все контейнеры
 	@docker-compose down
 
 update:  ##Обновить плагин для фискализации
 	@cp -r -f komtet_kassa php/classes/components/
 
-release: ## Создать архив для загрузки
+release:  ## Создать архив для загрузки
 	@mkdir -p $(DIST_MARKET_DIR)
 	@zip -r -q $(DIST_MARKET_DIR)/$(PROJECT_ZIP) $(PROJECT_DIR)
+	@tar -czf $(DIST_MARKET_DIR)/$(PROJECT_TAR_GZ) $(PROJECT_DIR)
 
 	@echo -e "${CYAN}Сборка обновлений завершена. ${COLOR_OFF}"
-	@echo -e "${CYAN}Для маркета: ${COLOR_OFF} ${YELLOW}${DIST_MARKET_DIR}/${PROJECT_ZIP}${COLOR_OFF}"
+	@echo -e "${CYAN}zip для публикации: ${COLOR_OFF} ${YELLOW}${DIST_MARKET_DIR}/${PROJECT_ZIP}${COLOR_OFF}"
+	@echo -e "${CYAN}tar.gz для публикации: ${COLOR_OFF} ${YELLOW}${DIST_MARKET_DIR}/${PROJECT_TAR_GZ}${COLOR_OFF}"
 
 .PHONY: help build start stop version release
 .DEFAULT_GOAL := help
