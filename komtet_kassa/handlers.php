@@ -154,6 +154,12 @@
                 case 6:
                     $vatObject = new KomtetVat(KomtetVat::RATE_120);
                     break;
+                case 7:
+                    $vatObject = new KomtetVat(KomtetVat::RATE_22);
+                    break;
+                case 8:
+                    $vatObject = new KomtetVat(KomtetVat::RATE_122);
+                    break;
                 default:
                     $vatObject = new KomtetVat(KomtetVat::RATE_NO);
             }
