@@ -78,6 +78,14 @@ if (!$objectTypesCollection->getTypeIdByGUID($GUIDS['config_type_komtet_kassa'])
     $_0_vat->setValue('vat', 2);
     $_0_vat->commit();
 
+    $_5_vat = $objectsCollection->getObject($objectsCollection->addObject("НДС 5%", $vatTypeId));
+    $_5_vat->setValue('vat', 9);
+    $_5_vat->commit();
+
+    $_7_vat = $objectsCollection->getObject($objectsCollection->addObject("НДС 7%", $vatTypeId));
+    $_7_vat->setValue('vat', 11);
+    $_7_vat->commit();
+
     $_10_vat = $objectsCollection->getObject($objectsCollection->addObject("НДС 10%", $vatTypeId));
     $_10_vat->setValue('vat', 3);
     $_10_vat->commit();
@@ -86,13 +94,29 @@ if (!$objectTypesCollection->getTypeIdByGUID($GUIDS['config_type_komtet_kassa'])
     $_20_vat->setValue('vat', 4);
     $_20_vat->commit();
 
-    $_110_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетный НДС 10/110", $vatTypeId));
+    $_22_vat = $objectsCollection->getObject($objectsCollection->addObject("НДС 22%", $vatTypeId));
+    $_22_vat->setValue('vat', 7);
+    $_22_vat->commit();
+
+    $_105_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетная ставка 5/105", $vatTypeId));
+    $_105_vat->setValue('vat', 10);
+    $_105_vat->commit();
+
+    $_107_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетная ставка 7/107", $vatTypeId));
+    $_107_vat->setValue('vat', 12);
+    $_107_vat->commit();
+
+    $_110_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетная ставка 10/110", $vatTypeId));
     $_110_vat->setValue('vat', 5);
     $_110_vat->commit();
 
-    $_120_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетный НДС 20/120", $vatTypeId));
+    $_120_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетная ставка 20/120", $vatTypeId));
     $_120_vat->setValue('vat', 6);
     $_120_vat->commit();
+
+    $_122_vat = $objectsCollection->getObject($objectsCollection->addObject("расчетная ставка 22/122", $vatTypeId));
+    $_122_vat->setValue('vat', 8);
+    $_122_vat->commit();
 
     $isPrintTypeId = $objectTypesCollection->addType($parentTypeId, "Печатать ли чек");
     $isPrintType = $objectTypesCollection->getType($isPrintTypeId);
